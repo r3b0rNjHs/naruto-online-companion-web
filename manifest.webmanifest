@@ -1,0 +1,24 @@
+{
+ "name": "Naruto Online Companion",
+ "short_name": "NO Companion",
+ "lang": "es",
+ "description": "Tu cuenta de Naruto Online: roster, equipos, recomendaciones y plan de la semana.",
+ "start_url": "./",
+ "scope": "./",
+ "display": "standalone",
+ "background_color": "#f5eee2",
+ "theme_color": "#c23b22",
+ "icons": [
+  {
+   "src": "icons/256.png",
+   "sizes": "256x256",
+   "type": "image/png"
+  },
+  {
+   "src": "icons/512.png",
+   "sizes": "512x512",
+   "type": "image/png",
+   "purpose": "any"
+  }
+ ]
+}

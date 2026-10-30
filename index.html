@@ -1,0 +1,343 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta name="theme-color" content="#c23b22">
+<meta name="description" content="Tu cuenta de Naruto Online: roster, equipos, recomendaciones y plan de la semana.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="64x64" href="icons/64.png">
+<link rel="apple-touch-icon" href="icons/180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="NO Companion">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>:root{color-scheme:light}body{margin:0;font:14px/1.4 system-ui,-apple-system,"Segoe UI",sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<script>window.NOC_APP = { version: "2026.10.30", pwa: true };</script>
+<title>Naruto Online Companion</title>
+<link rel="stylesheet" href="fonts/fonts.css">
+<link rel="stylesheet" href="app.css">
+<script>
+// Tema elegido por el usuario (Automático / Oscuro / Claro), antes de pintar para que no parpadee. «Automático» no toca nada:
+// sigue al sistema (o al tema que ponga quien enseña la página).
+try { const t = localStorage.getItem("cuartel-ninja-v1-theme"); if (t === "dark" || t === "light") document.documentElement.dataset.theme = t; } catch (e) {}
+// Plan B: si la hoja aparte no llegara a cargar, se lee y se mete dentro para que la página nunca salga sin diseño.
+addEventListener("DOMContentLoaded", () => {
+  if (getComputedStyle(document.documentElement).getPropertyValue("--app-css").trim() === "1") return;
+  fetch("app.css").then(r => r.ok ? r.text() : "").then(css => { if (css) { const s = document.createElement("style"); s.textContent = css; document.head.appendChild(s); } }).catch(() => {});
+});
+</script>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <div class="seal" aria-hidden="true">忍</div>
+      <div style="min-width:0">
+        <h1>Naruto Online Companion</h1>
+        <div class="brand-sub" id="acct">Tu cuenta de Naruto Online: roster, equipos y meta.</div>
+      </div>
+    </div>
+    <div class="top-right">
+      <form class="nsearch" id="nsearch" role="search" autocomplete="off"><input type="search" id="nsearchIn" list="nsearchList" placeholder="Buscar ninja…" aria-label="Buscar un ninja y abrir su ficha"><datalist id="nsearchList"></datalist></form>
+      <button class="btn small lang-btn" id="setBtn" type="button" title="Ajustes · Settings" aria-label="Ajustes · Settings">⚙</button>
+      <div class="sync" id="sync"><span class="dot" id="syncDot"></span><span id="syncText">Cargando…</span></div>
+    </div>
+  </header>
+
+  <nav class="tabs" role="tablist" aria-label="Secciones">
+    <button class="tab" role="tab" id="sec-inicio" aria-selected="true" data-sec="inicio">Inicio</button>
+    <button class="tab" role="tab" id="sec-roster" aria-selected="false" data-sec="roster">Mi roster<span class="count" id="cntOwned">0</span></button>
+    <button class="tab" role="tab" id="sec-equipos" aria-selected="false" data-sec="equipos">Equipos</button>
+    <button class="tab" role="tab" id="sec-biblioteca" aria-selected="false" data-sec="biblioteca">Biblioteca</button>
+    <button class="tab" role="tab" id="sec-semana" aria-selected="false" data-sec="semana">Semana</button>
+    <button class="tab" role="tab" id="sec-creador" aria-selected="false" data-sec="creador">Creador<span class="count" id="cntTeams">0</span></button>
+    <button class="fab" id="fab" type="button" aria-haspopup="dialog"><span aria-hidden="true">＋</span> Intento</button>
+  </nav>
+  <div class="sec-head" id="secHead"><div><h2 id="secTitle"></h2></div><p id="secDesc"></p></div>
+  <nav class="subnav" id="subnav" role="tablist" aria-label="Vistas de la sección"></nav>
+
+  <!-- INICIO -->
+  <section id="view-inicio" hidden><div id="inicioBody"></div></section>
+
+  <!-- PERFIL -->
+  <section id="view-perfil">
+    <nav class="subtabs roster-tabs" id="rosterTabs" role="tablist" aria-label="Partes de tu roster">
+      <button class="subtab" role="tab" data-rt="ninjas">Ninjas</button><button class="subtab" role="tab" data-rt="cartas">Cartas</button><button class="subtab" role="tab" data-rt="summons">Summons</button><button class="subtab" role="tab" data-rt="tacticas">Tácticas</button>
+    </nav>
+    <div class="profile-head">
+      <div class="panel">
+        <div class="eyebrow">Resumen</div>
+        <p class="acct-line" id="acctLine"></p>
+        <div class="stats" style="margin-top:8px">
+          <div class="stat"><b id="stNinjas">0</b><span class="muted">ninjas</span></div>
+          <div class="stat"><b id="stSummons">0</b><span class="muted">summons</span></div>
+          <div class="stat"><b id="stBT">0</b><span class="muted">con breakthrough</span></div>
+        </div>
+        <div class="bars" id="elBars"></div>
+        <div class="row" style="margin-top:12px">
+          <button class="btn small only-claude" id="copyRoster">Copiar como roster TOML</button>
+          <span class="note only-claude">Para el repo: roster/mi_roster.toml</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel" id="poolPanel" data-fold="pool" hidden></div>
+
+    <div class="panel stack" data-fold="ninjas">
+      <div class="row fold-head" style="justify-content:space-between">
+        <h2>Mis ninjas</h2>
+        <div class="seg" role="group" aria-label="Qué mostrar">
+          <button id="showAll" aria-pressed="true">Catálogo completo</button>
+          <button id="showMine" aria-pressed="false">Solo los míos</button>
+        </div>
+      </div>
+      <p class="note" style="margin:0">Toca un ninja para marcarlo como tuyo y toca sus estrellas (★★★ = 3★). El siguiente que marques entra con las mismas estrellas, así que marca seguidos los que tengan igual. Luego, si tiene skill breakthrough (BT). La ⓘ de la esquina abre su ficha (ahí también puedes marcarlo «No usar en mis equipos»).</p>
+      <div class="filters">
+        <input type="search" id="q" placeholder="Buscar ninja (p. ej. obito, madara final)" aria-label="Buscar ninja">
+        <select id="fEl" aria-label="Elemento"><option value="">Elemento</option><option>Fire</option><option>Water</option><option>Wind</option><option>Earth</option><option>Lightning</option></select>
+        <select id="fRar" aria-label="Rareza"><option value="">Rareza</option><option>S</option><option>A</option><option>B</option><option>C</option></select>
+        <select id="fRole" aria-label="Rol"><option value="">Rol</option><option>Damage</option><option>Support</option><option>Defense</option><option>Control</option></select>
+        <select id="fSort" aria-label="Orden"><option value="name">A–Z</option><option value="util">Más útiles primero</option><option value="meta">Más usados en arena</option></select>
+      </div>
+      <div class="catalog" id="catalog"></div>
+      <div class="muted note" id="catalogMore"></div>
+    </div>
+
+    <div class="panel stack" style="margin-top:14px" data-fold="summons">
+      <div class="row fold-head"><h2>Mis summons <span class="muted mono" style="font-size:.9rem" id="sumCount"></span></h2></div>
+      <div class="catalog" id="summonCatalog"></div>
+    </div>
+
+    <div class="panel stack" style="margin-top:14px" data-fold="assists">
+      <div class="row fold-head" style="justify-content:space-between">
+        <h2>Mis cartas de asistencia <span class="muted mono" style="font-size:.9rem" id="asCount"></span></h2>
+        <div class="seg" role="group" aria-label="Qué cartas mostrar">
+          <button data-asf="all" aria-pressed="true">Todas</button>
+          <button data-asf="mine" aria-pressed="false">Las mías</button>
+          <button data-asf="top" aria-pressed="false">Las más útiles</button>
+        </div>
+      </div>
+      <p class="note" style="margin:0">Toca una carta para marcarla como tuya y elige su nivel. Ojo: no funcionan en ningún modo tipo arena (Arena, Theme Arena, Zenith, 3v3, Arena Sage, Arena Matsuri, Duel Arena, Fair Battle). El efecto que se muestra es el del nivel máximo.</p>
+      <div class="catalog assists" id="assistCatalog"></div>
+    </div>
+      <div class="panel stack" style="margin-top:14px" data-fold="tactics">
+      <div class="row fold-head"><h2>Tácticas y colocación</h2></div>
+      <p class="note" style="margin:0">Tu táctica (Ghost Kill…) y cómo se colocan los ninjas. Los tableros de Equipos muestran el bonus que recibe cada uno.</p>
+      <div class="tac-bar" data-tacbar></div>
+      <details class="howto"><summary>Cómo se colocan los ninjas en el tablero</summary><div class="note" style="margin:6px 0 0;display:grid;gap:6px">
+<p data-en="&lt;b&gt;The square decides the order of action.&lt;/b&gt; Squares are numbered 1-9 starting from the front column (the right one), top to bottom: the ninja in the lowest square acts first, and in that same order casts mysteries and follows chases (10/20/30-combo chases always go last). That&#x27;s why Madara goes in square 1. Initiative only decides whether your 1st acts before the enemy&#x27;s 1st; it doesn&#x27;t reorder your team." style="margin:0"><b>La casilla decide el orden de actuación.</b> Las casillas se numeran 1-9 empezando por la columna delantera (la de la derecha), de arriba abajo: el ninja en la casilla más baja actúa primero, y en ese mismo orden lanza mysteries y persigue chases (los chases de 10/20/30 combo van siempre al final). Por eso Madara va en la 1. La iniciativa solo decide si tu 1.º actúa antes que el 1.º rival, no reordena tu equipo.</p>
+<p data-en="&lt;b&gt;The enemy&#x27;s basic attack hits your ninja in the same line&lt;/b&gt; (horizontal row), the front-most one; if that line is empty, the one above, then the one below. Almost everything used at the top hits the whole team, so placement matters mostly for the order." style="margin:0"><b>El ataque básico rival va a tu ninja de la misma línea</b> (fila horizontal), al de más delante; si esa línea está vacía, a la de arriba y luego a la de abajo. Casi todo lo que se usa en el top pega a todo el equipo, así que la colocación cuenta sobre todo por el orden.</p>
+<p data-en="&lt;b&gt;Boards come from the real top.&lt;/b&gt; They are the grids of the 250 players in KonohaHub&#x27;s Top 100 (BR, EN and global, 2-Oct-2026). If someone at the top runs the same team, their most typical placement is copied; if not, each ninja goes where they put it most, keeping the same order of action. What the top does: the main goes in the back column (93%), Madara acts first (95% of those who run him) and all three lines are almost always used (89%). Each card says whether its placement is copied or estimated." style="margin:0"><b>Los tableros salen del top real.</b> Son las rejillas de los 250 jugadores del Top 100 de KonohaHub (BR, EN y global, 2-oct-2026). Si alguien del top lleva el mismo equipo, se copia su colocación más típica; si no, cada ninja va donde más lo ponen ellos, con el mismo orden de actuación. Lo que hace el top: el main va en la columna de atrás (93%), Madara actúa el primero (95% de los que lo llevan) y casi siempre se usan las tres líneas (89%). Cada tarjeta dice si su colocación es copiada o estimada.</p>
+<p data-en="&lt;b&gt;Tactics&lt;/b&gt; (from level 60, upgraded with tactic pages): they give a bonus to each of the 9 squares (in Ghost Kill: back column Ninjutsu, middle Attack, front Life). Ghost Kill is the one to upgrade first. In «Your tactics» you choose yours and each board shows the bonus each ninja gets; nothing is moved, because the top already plays with tactics." style="margin:0"><b>Tácticas</b> (desde nivel 60, se suben con páginas de táctica): dan un bonus a cada una de las 9 casillas (en Ghost Kill: columna de atrás Ninjutsu, centro Ataque, delante Vida). Ghost Kill es la recomendada para subir primero. En «Tus tácticas» eliges la tuya y cada tablero muestra qué bonus recibe cada ninja; no se recoloca nada, porque el top ya juega con táctica.</p>
+<p data-en="Against attacks on the whole team, placement doesn&#x27;t protect you: there, life, shields and escaping death are what count." style="margin:0">Contra ataques a todo el equipo la colocación no protege: ahí cuentan la vida, los escudos y escapar de la muerte.</p></div></details>
+    </div>
+  </section>
+
+  <!-- PROGRESO -->
+  <section id="view-progreso" hidden><div id="progresoBody"></div></section>
+  <section id="view-probar" hidden><div id="probarBody"></div></section>
+  <section id="view-camino" hidden><div id="caminoBody"></div></section>
+  <section id="view-mejorar" hidden><div id="mejorarBody"></div></section>
+
+  <!-- CREADOR -->
+  <section id="view-creador" hidden>
+    <div class="builder">
+      <div class="stack">
+        <div class="panel stack">
+          <div class="row" style="justify-content:space-between">
+            <h2 id="teamTitle">Equipo nuevo</h2>
+            <button class="btn small" id="clearBoard">Vaciar</button>
+          </div>
+          <div class="board-wrap">
+            <div class="board-axis"><span>Fila trasera</span><span>Fila media</span><span>Fila delantera</span></div>
+            <div class="board" id="board"></div>
+            <div class="enemy">Enemigo →</div>
+          </div>
+          <p class="note" style="margin:0">Máximo 4 unidades, main incluido. El número de cada casilla es el orden en que se comprueban los chases: primero la fila delantera, de arriba abajo. Las columnas son filas (profundidad) y las filas del tablero son líneas (carriles).</p>
+          <div id="loadoutBox" hidden>
+            <div class="eyebrow" style="margin-bottom:6px">Habilidades equipadas del main</div>
+            <div class="loadout" id="loadout"></div>
+          </div>
+          <div class="loadout">
+            <label>Summon · mystery<select id="summonMSel"></select></label>
+            <label>Summon · chase<select id="summonSel"></select></label>
+          </div>
+          <div id="builderWarn" class="warn-box" role="status" hidden></div>
+        </div>
+
+        <div class="panel stack">
+          <div class="row" style="justify-content:space-between">
+            <h3>Colocar ninja</h3>
+            <div class="seg" role="group" aria-label="Qué ninjas mostrar">
+              <button id="pickMine" aria-pressed="true">Míos</button>
+              <button id="pickAll" aria-pressed="false">Todos</button>
+            </div>
+          </div>
+          <input type="search" id="pq" placeholder="Buscar" aria-label="Buscar ninja para colocar">
+          <p class="note" style="margin:0" id="pickHint">Elige un ninja y después una casilla libre.</p>
+          <div class="picker" id="picker"></div>
+        </div>
+      </div>
+
+      <div class="stack">
+        <div class="panel stack">
+          <div class="row" style="justify-content:space-between">
+            <h2>Cadena de chases</h2>
+            <span class="note" id="chainSummary"></span>
+          </div>
+          <div class="table-scroll">
+            <table class="starters">
+              <thead><tr><th>Inicio</th><th>Pasos</th><th>Combo</th><th>Termina en</th></tr></thead>
+              <tbody id="starters"></tbody>
+            </table>
+          </div>
+          <ol class="chain" id="chain"></ol>
+          <div class="endnote" id="endnote" hidden></div>
+        </div>
+
+        <div class="panel stack">
+          <h3>Huecos, colocación y piezas que tienes</h3>
+          <div class="gaps" id="gaps"></div>
+        </div>
+
+        <div class="panel stack">
+          <h3>Guardar equipo</h3>
+          <div class="row">
+            <input type="text" id="teamName" placeholder="Nombre (p. ej. Arena principal)" aria-label="Nombre del equipo" style="flex:1 1 200px">
+            <select id="teamMode" aria-label="Modo de juego">
+              <option>Arena</option><option>PvP</option><option>Infinite Illusion · Stage 1 (Chase)</option>
+              <option>Infinite Illusion · Stage 2 (Mystery)</option><option>Infinite Illusion · Stage 3 (Standard)</option>
+              <option>Nine-Tails</option><option>Ranked Battle</option><option>Ninja Exam</option><option>Evento</option><option>Otro</option>
+            </select>
+          </div>
+          <textarea id="teamNotes" placeholder="Notas: contra quién, qué assist card, qué breakthrough…" aria-label="Notas"></textarea>
+          <div class="row"><button class="btn primary" id="saveTeam">Guardar equipo</button><button class="btn" id="newTeam">Empezar otro</button></div>
+        </div>
+      </div>
+    </div>
+    <p data-en="The simulation follows the priority rules of the Naruto Online Nexus simulator. State chases go first, then combo chases. On a tie, square order. Combo only goes up with the &quot;N Combo&quot; each skill states. It ignores dodges, immunities and probabilities: it&#x27;s the chain that &lt;em&gt;can&lt;/em&gt; happen." class="note" style="margin-top:14px">La simulación sigue las reglas de prioridad del simulador de Naruto Online Nexus. Primero van los chases por estado y después los de combo. A igualdad, el orden de casilla. El combo solo sube con los "N Combo" que indica cada habilidad. No tiene en cuenta esquivas, inmunidades ni probabilidades: es la cadena que <em>puede</em> salir.</p>
+  </section>
+
+  <!-- TUS DATOS: copia de seguridad (exportar / importar) -->
+  <section id="view-datos" hidden><div id="datosBody"></div></section>
+
+  <!-- FUENTES Y CRÉDITOS -->
+  <section id="view-fuentes" hidden><div id="fuentesBody"></div></section>
+  <!-- AJUSTES -->
+  <section id="view-ajustes" hidden><div id="ajustesBody"></div></section>
+
+  <!-- INFINITE ILLUSION -->
+  <section id="view-ii" hidden>
+    <nav class="subtabs" id="modeTabs" role="tablist" aria-label="Modo de juego"></nav>
+    <div class="panel mode-info" id="modeInfo"></div>
+    <div class="ii-grid" id="iiGrid"></div>
+    <p class="note only-claude" style="margin-top:14px">Cada intento que registras se guarda en la página y Claude lo puede leer. Así las recomendaciones se ajustan con tus resultados reales y no solo con la tier list y el simulador.</p>
+  </section>
+
+  <!-- MADARA IDEAL -->
+  <section id="view-ideal" hidden>
+    <div id="idealHero"></div>
+    <nav class="subtabs" id="idealTabs" role="tablist" aria-label="Modo de juego"></nav>
+    <div class="panel mode-info" id="idealInfo"></div>
+    <div class="ideal-grid" id="idealGrid"></div>
+  </section>
+
+  <!-- SUMMONS -->
+  <section id="view-summons" hidden>
+    <details class="howto" style="margin-bottom:14px"><summary>Cómo funcionan y de dónde sale la valoración</summary>
+      <div class="note" style="margin:6px 0 0;display:grid;gap:6px">
+        <p data-en="The summon is a fifth piece of the team (one per team) with a skill that triggers on its own: it either &lt;b&gt;follows a state&lt;/b&gt; (Knockdown, Low/High Float, Repulse…; yellow and red ones, twice per round) or triggers at &lt;b&gt;10 or 20 combo&lt;/b&gt;. It also has a &lt;b&gt;mystery for the main&lt;/b&gt; (it fires when the main uses its mystery) that is levelled up with gems." style="margin:0">El summon es una quinta pieza del equipo (uno por equipo) con una habilidad que salta sola: o <b>persigue un estado</b> (Knockdown, Low/High Float, Repulse…; los amarillos y rojos, dos veces por ronda) o salta al llegar a <b>10 o 20 combo</b>. Además tiene un <b>mystery para el main</b> (se activa cuando el main usa su mystery) que se sube de nivel con gemas.</p>
+        <p data-en="They&#x27;re unlocked with fragments: &lt;b&gt;100 for red, 80 for yellow&lt;/b&gt;. Blue and purple ones are captured; red ones come mostly from events and packs (Red Summon Optional Pack). Cultivating them gives fixed stats to your ninjas even if you don&#x27;t bring them." style="margin:0">Se desbloquean con fragmentos: <b>100 los rojos, 80 los amarillos</b>. Los azules y morados se capturan; los rojos salen sobre todo de eventos y packs (Red Summon Optional Pack). Cultivarlos da estadísticas fijas a tus ninjas aunque no los lleves.</p>
+        <p data-en="&lt;b&gt;The PvP/PvE rating is our own&lt;/b&gt;, based on each skill&#x27;s text: there is no community summon tier list for the browser game (the ones you find are for the mobile games), and neither Nexus nor KonohaHub publish which summon the top uses. «Fits your team» = it follows a state your main team causes, or triggers on combo, which your team reaches easily." style="margin:0"><b>La nota PvP/PvE es valoración propia</b> por el texto de cada habilidad: no existe una tier list de summons de la comunidad del juego de navegador (las que salen buscando son de los juegos de móvil), y ni Nexus ni KonohaHub publican qué summon usa el top. «Encaja con tu equipo» = persigue un estado que causa tu equipo principal o salta por combo, que tu equipo alcanza fácil.</p>
+        <p style="margin:0">Datos: páginas públicas de summons de Narutoonline Nexus (2-oct-2026).</p>
+      </div></details>
+    <div id="sumBody"></div>
+  </section>
+
+  <!-- RECOMENDADOS -->
+  <section id="view-recs" hidden>
+    <details class="howto" style="margin-bottom:14px"><summary>Cómo se eligen</summary>
+      <p data-en="For the game in general. Only the ones you &lt;b&gt;don&#x27;t own&lt;/b&gt; appear: mark one in «My roster» and it disappears. Each ninja appears once, in its first group. The order comes from the combined tier list (KonohaHub, community ratings and top usage) and, on a tie, how many of the 250 players in KonohaHub&#x27;s Top 100 use it. «Estimated ≈» = no tier list or usage yet: rated by kit and community. Free-for-all gifts (Madara [Edo Tensei], Hashirama [New Year], Choji [GNW]) don&#x27;t count because their usage is inflated." class="note" style="margin:6px 0 0">Para el juego en general, no solo para tu Madara. Solo salen los que <b>no tienes</b>: al marcar uno en «Mi roster» desaparece. Cada ninja va una sola vez, en su primer grupo. El orden sale de la tier list combinada (KonohaHub, valoraciones de la comunidad y uso en el top) y, a igualdad, de cuántas veces lo usan los 250 jugadores del Top 100 de KonohaHub. «Estimado ≈» = sin tier list ni uso todavía: valoración por kit y comunidad. Los regalados a todos (Madara [Edo Tensei], Hashirama [New Year], Choji [GNW]) no cuentan porque su uso está inflado.</p>
+    </details>
+    <div class="recs" id="recs"></div>
+  </section>
+
+  <!-- PLAN DE EVENTOS -->
+  <section id="view-plan" hidden>
+    <div id="planBody"></div>
+  </section>
+
+  <!-- TIENDAS Y MONEDAS -->
+  <section id="view-tiendas" hidden>
+    <div id="shopsBody"></div>
+  </section>
+
+  <!-- META Y CONSEJOS -->
+  <section id="view-tier" hidden>
+    <div class="panel" style="margin-bottom:14px">
+      <details class="howto"><summary>Cómo se calcula</summary><p data-en="Every ninja with meta data, owned or not. Each source gives a score and the tier comes from the average: &lt;b&gt;KonohaHub&lt;/b&gt; (August and September 2026 tier lists), &lt;b&gt;community ratings&lt;/b&gt; (September 2026) and &lt;b&gt;Nexus top usage&lt;/b&gt;, which counts half because it also depends on how easy the ninja is to get. With a single source, A at most; with usage only or if it&#x27;s given to everyone, B at most. Tap a ninja to see why it&#x27;s there. Usage in KonohaHub&#x27;s top (EN zones) and in the 250 real Top 100 formations (2-Oct-2026) counts the same as Nexus&#x27;s: the higher one is used." class="note" style="margin:6px 0 0">Todos los ninjas con datos de meta, los tengas o no. Cada fuente da una nota y el tier sale de la media: <b>KonohaHub</b> (tier lists de agosto y septiembre de 2026), las <b>valoraciones de la comunidad</b> (septiembre de 2026) y el <b>uso en el top de Nexus</b>, que pesa la mitad porque también depende de lo fácil que sea conseguirlo. Con una sola fuente, como mucho A; con solo uso o si se regala a todos, como mucho B. Toca un ninja para ver por qué está ahí. El uso en el top de KonohaHub (zonas EN) y en las 250 formaciones reales del Top 100 de KonohaHub (2-oct-2026) cuenta igual que el de Nexus: se toma el mayor.</p></details>
+      <div class="subtabs" id="tierTabs" role="tablist" style="margin-top:12px"></div>
+      <div class="row" style="align-items:center;gap:12px;flex-wrap:wrap">
+        <input type="search" id="tierFind" placeholder="Buscar ninja (p. ej. Guy)" aria-label="Buscar ninja en la tier list" style="flex:1 1 220px;max-width:340px">
+        <label class="chk-row" style="margin:0"><input type="checkbox" id="tierMine"><span>Solo los míos</span></label>
+      </div>
+      <div id="tierHits"></div>
+    </div>
+    <div id="tierBody"></div>
+  </section>
+
+  <section id="view-marionetas" hidden>
+    <div id="puppetsBody" class="pup"></div>
+  </section>
+
+  <section id="view-meta" hidden>
+    <div class="subtabs" id="metaTabs" role="tablist"></div>
+    <div id="metaBody"></div>
+  </section>
+
+  <!-- GUARDADOS -->
+  <section id="view-guardados" hidden>
+    <div class="saved" id="saved"></div>
+  </section>
+</div>
+<nav class="bnav" id="bnav" aria-label="Navegación">
+  <button data-bsec="inicio"><span class="bi" aria-hidden="true">家</span>Inicio</button>
+  <button data-bsec="equipos"><span class="bi" aria-hidden="true">陣</span>Equipos</button>
+  <button class="bnav-add" data-bqt aria-haspopup="dialog"><span class="bi" aria-hidden="true">＋</span>Intento</button>
+  <button data-bsec="roster"><span class="bi" aria-hidden="true">忍</span>Roster</button>
+  <button data-bmore aria-expanded="false" aria-controls="bmore"><span class="bi" aria-hidden="true">巻</span>Más</button>
+</nav>
+<div class="bmore" id="bmore" hidden>
+  <button data-bsec="biblioteca">Biblioteca</button><button data-bsec="semana">Semana</button><button data-bsec="creador">Creador</button><button data-bsec="ajustes">Ajustes</button>
+</div>
+<div class="qt-back" id="qtBack" hidden>
+  <div class="qt panel" role="dialog" aria-modal="true" aria-labelledby="qtTitle">
+    <div class="row" style="justify-content:space-between"><h2 id="qtTitle">Registrar un intento</h2><button class="btn small" type="button" data-qt-close aria-label="Cerrar">✕</button></div>
+    <form id="qtForm" autocomplete="off"></form>
+  </div>
+</div>
+<div class="qt-back" id="nfBack" hidden>
+  <div class="qt panel nf" role="dialog" aria-modal="true" aria-labelledby="nfTitle">
+    <div class="row" style="justify-content:flex-end"><button class="btn small" type="button" data-nf-close aria-label="Cerrar ficha">✕</button></div>
+    <div id="nfBody"></div>
+  </div>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+(async () => {
+  const SRCS = ["data.js", "portraits.js", "gen/top-madara.js", "gen/summons.js", "gen/rec-all.js", "gen/meta-data.js", "gen/kh-usage.js", "gen/tier.js", "gen/ninja-uso.js", "gen/kh-pos.js", "gen/ninja-plus.js", "gen/nx-forms.js", "gen/packs.js", "content/assists.js", "content/bti.js", "content/novedades.js", "content/consultas.js", "content/fuentes.js", "content/i18n-en.js", "content/i18n-c.js", "content/modes.js", "content/ideal.js", "content/recs.js", "content/recs-desc.js", "content/meta-txt.js", "content/ii-top.js", "content/ii-more.js", "content/plan.js", "content/shops.js", "content/rutas.js", "app.js"], PACK = new Set(["data.js", "gen/top-madara.js", "gen/summons.js", "gen/rec-all.js", "gen/meta-data.js", "gen/kh-usage.js", "gen/tier.js", "gen/ninja-uso.js", "gen/kh-pos.js", "gen/ninja-plus.js", "gen/nx-forms.js", "gen/packs.js", "content/assists.js", "content/bti.js", "content/novedades.js", "content/consultas.js", "content/fuentes.js", "content/i18n-en.js", "content/i18n-c.js", "content/ideal.js", "content/meta-txt.js", "content/ii-top.js", "content/ii-more.js", "content/plan.js", "content/shops.js", "content/rutas.js"]), BUNDLED = "2026-10-30T00:14:49Z", SCHEMA = 1;
+  let c = null;
+  try { const T = window.__TAURI__ && window.__TAURI__.core; const txt = T && await T.invoke("content_get");
+    if (txt) { const o = JSON.parse(txt); if (o && o.schema === SCHEMA && String(o.v) > BUNDLED && o.files) c = o; } } catch (e) { console.warn("contenido descargado no usado:", e); }
+  window.NOC_CONTENT = { v: c ? c.v : BUNDLED, bundled: BUNDLED, schema: SCHEMA, downloaded: !!c };
+  for (const src of SRCS) await new Promise(res => {
+    const s = document.createElement("script"), f = c && PACK.has(src) && c.files[src];
+    if (f && /^[A-Za-z_$][\w$]*$/.test(f.name)) { s.text = (f.kind === "window" ? "window." + f.name + " = " : "const " + f.name + " = ") + JSON.stringify(f.data) + ";"; document.body.appendChild(s); res(); }
+    else { s.src = src; s.onload = s.onerror = res; document.body.appendChild(s); }
+  });
+})();
+</script>
+
+<script>if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol)) addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(e => console.warn("sin modo offline:", e)));</script>
+</html>
